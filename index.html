@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#17202a"><link rel="manifest" href="manifest.json">
+<title>My Expense</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f3f5f7;color:#17202a;font-family:Arial,sans-serif}
+header{background:#17202a;color:white;padding:18px 15px;position:sticky;top:0;z-index:4}header h1{margin:0;font-size:21px}header small{opacity:.7}
+main{max-width:760px;margin:auto;padding:12px}.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.card,.box{background:white;border-radius:15px;padding:13px;box-shadow:0 2px 10px #0000000c}.label{font-size:11px;color:#6b7280}.num{font-size:18px;font-weight:700;margin-top:5px}
+.box{margin-top:11px}h2{font-size:16px;margin:0 0 11px}.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+label{display:block;font-size:11px;color:#68707a;margin:0 0 5px}input,select,button{width:100%;padding:12px;border:1px solid #d9dee3;border-radius:10px;font-size:14px;background:white}
+button{background:#17202a;color:white;border:0;font-weight:700}.wide{margin-top:9px}.item{display:flex;justify-content:space-between;gap:8px;padding:11px 0;border-bottom:1px solid #eee}.item:last-child{border:0}
+.desc{font-weight:700}.meta{font-size:11px;color:#777;margin-top:3px}.amount{font-weight:700}.expense{color:#c0392b}.income{color:#16834b}.mini button{width:auto;padding:6px 8px;font-size:11px;margin-left:3px;background:#eef1f4;color:#17202a}.empty{text-align:center;color:#888;padding:18px}
+@media(max-width:500px){.cards{grid-template-columns:1fr}.row{grid-template-columns:1fr}}
+</style></head>
+<body>
+<header><h1>💰 My Expense</h1><small>Mobile Expense Tracker</small></header>
+<main>
+<div class="cards"><div class="card"><div class="label">TODAY EXPENSE</div><div class="num" id="te">Rs. 0</div></div><div class="card"><div class="label">TODAY INCOME</div><div class="num" id="ti">Rs. 0</div></div><div class="card"><div class="label">BALANCE</div><div class="num" id="tb">Rs. 0</div></div></div>
+
+<section class="box"><h2 id="title">Add Expense</h2>
+<div class="row"><div><label>Type</label><select id="type"><option value="expense">Expense</option><option value="income">Income</option></select></div><div><label>Amount (Rs.)</label><input id="amount" type="number" min="0" inputmode="decimal" placeholder="500"></div></div>
+<div class="row" style="margin-top:8px"><div><label>Category</label><select id="cat"><option>Food</option><option>Petrol</option><option>Shopping</option><option>Bills</option><option>Business</option><option>Medicine</option><option>Transport</option><option>Other</option></select></div><div><label>Date</label><input id="date" type="date"></div></div>
+<div style="margin-top:8px"><label>Description</label><input id="desc" placeholder="What did you spend on?"></div>
+<button class="wide" onclick="save()" id="save">+ Save</button></section>
+
+<section class="box"><h2>Records</h2><div class="row"><div><label>Filter date</label><input id="fd" type="date" onchange="render()"></div><div><label>Category</label><select id="fc" onchange="render()"><option value="">All</option><option>Food</option><option>Petrol</option><option>Shopping</option><option>Bills</option><option>Business</option><option>Medicine</option><option>Transport</option><option>Other</option></select></div></div><div id="list"></div></section>
+
+<section class="box"><h2>Backup</h2><button onclick="backup()">⬇ Download CSV Backup</button><button class="wide" onclick="clearData()" style="background:#eee;color:#17202a">Clear All Data</button></section>
+</main>
+<script>
+let data=JSON.parse(localStorage.getItem("myExpenses")||"[]"),edit=null;
+const $=x=>document.getElementById(x),today=()=>new Date().toISOString().slice(0,10);
+$("date").value=today();$("fd").value=today();
+const money=n=>"Rs. "+Number(n).toLocaleString("en-PK",{maximumFractionDigits:2});
+function save(){let amount=+$("amount").value;if(!amount||!$("date").value){alert("Amount aur date enter karein.");return}
+let e={id:edit||Date.now(),type:$("type").value,amount,cat:$("cat").value,date:$("date").value,desc:$("desc").value.trim()};
+data=edit?data.map(x=>x.id===edit?e:x):[...data,e];localStorage.setItem("myExpenses",JSON.stringify(data));reset();render()}
+function reset(){edit=null;$("title").textContent="Add Expense";$("save").textContent="+ Save";$("amount").value="";$("desc").value="";$("date").value=today()}
+function editE(id){let e=data.find(x=>x.id===id);edit=id;$("title").textContent="Edit Entry";$("save").textContent="Update";$("type").value=e.type;$("amount").value=e.amount;$("cat").value=e.cat;$("date").value=e.date;$("desc").value=e.desc;scrollTo({top:0,behavior:"smooth"})}
+function del(id){if(confirm("Delete this entry?")){data=data.filter(x=>x.id!==id);localStorage.setItem("myExpenses",JSON.stringify(data));render()}}
+function render(){let t=data.filter(x=>x.date===today()),ex=t.filter(x=>x.type==="expense").reduce((a,x)=>a+x.amount,0),inc=t.filter(x=>x.type==="income").reduce((a,x)=>a+x.amount,0);$("te").textContent=money(ex);$("ti").textContent=money(inc);$("tb").textContent=money(inc-ex);
+let d=$("fd").value,c=$("fc").value,a=data.filter(x=>(!d||x.date===d)&&(!c||x.cat===c)).sort((x,y)=>y.id-x.id);
+$("list").innerHTML=a.length?a.map(x=>`<div class="item"><div><div class="desc">${esc(x.desc||x.cat)}</div><div class="meta">${x.date} • ${esc(x.cat)}</div></div><div style="text-align:right"><div class="amount ${x.type}">${x.type==="expense"?"-":"+"}${money(x.amount)}</div><div class="mini"><button onclick="editE(${x.id})">Edit</button><button onclick="del(${x.id})">Delete</button></div></div></div>`).join(""):'<div class="empty">No records found</div>'}
+function backup(){let rows=[["Date","Type","Category","Description","Amount"],...data.map(x=>[x.date,x.type,x.cat,x.desc,x.amount])],csv=rows.map(r=>r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(",")).join("\\n"),a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download="expense-backup.csv";a.click()}
+function clearData(){if(confirm("Delete all data?")){data=[];localStorage.removeItem("myExpenses");render()}}
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}render();
+</script></body></html>
