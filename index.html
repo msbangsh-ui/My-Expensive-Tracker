@@ -47,4 +47,4 @@ $("list").innerHTML=a.length?a.map(x=>`<div class="item"><div><div class="desc">
 function backup(){let rows=[["Date","Type","Category","Description","Amount"],...data.map(x=>[x.date,x.type,x.cat,x.desc,x.amount])],csv=rows.map(r=>r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(",")).join("\\n"),a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download="expense-backup.csv";a.click()}
 function clearData(){if(confirm("Delete all data?")){data=[];localStorage.removeItem("myExpenses");render()}}
 function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}render();
-</script></body></html>
+if("serviceWorker" in navigator){navigator.serviceWorker.register("./sw.js").catch(()=>{})}</script></body></html>
