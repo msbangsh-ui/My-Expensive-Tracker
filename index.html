@@ -1,207 +1,40 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#111827">
-<link rel="manifest" href="manifest.json">
-<title>My Expense Tracker</title>
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0f172a"><link rel="manifest" href="manifest.json"><title>Expense Manager</title>
 <style>
-*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:#f3f4f6;color:#111827}
-button,input,select{font:inherit}button{cursor:pointer;border:0;border-radius:12px;padding:11px 14px}
-.wrap{max-width:900px;margin:auto;padding:16px}.card{background:#fff;border-radius:18px;padding:16px;margin:12px 0;box-shadow:0 2px 12px #0000000d}
-h1,h2,h3{margin:0 0 12px}.muted{color:#6b7280;font-size:14px}
-.auth{max-width:430px;margin:8vh auto}label{display:block;font-size:13px;font-weight:600;margin:10px 0 5px}
-input,select{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:12px;background:#fff}
-.primary{background:#111827;color:#fff;width:100%;margin-top:12px}.secondary{background:#e5e7eb}
-.danger{background:#fee2e2;color:#991b1b}.success{background:#dcfce7;color:#166534}
-.row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.stat{padding:15px;border-radius:16px;background:#fff;border:1px solid #e5e7eb}
-.stat b{display:block;font-size:22px;margin-top:4px}.green{color:#15803d}.red{color:#b91c1c}
-.formgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
-.actions{display:flex;gap:8px;flex-wrap:wrap}.actions button{padding:8px 11px}
-.item{display:flex;justify-content:space-between;gap:12px;align-items:center;border-top:1px solid #eee;padding:12px 0}
-.item:first-child{border-top:0}.badge{font-size:12px;padding:4px 8px;border-radius:999px;background:#e5e7eb}
-.hidden{display:none!important}.top{display:flex;justify-content:space-between;align-items:center;gap:10px}
-.msg{padding:10px;border-radius:10px;margin:10px 0;font-size:14px}
-@media(max-width:650px){.row,.formgrid{grid-template-columns:1fr}.item{align-items:flex-start;flex-direction:column}}
-</style>
-</head>
-<body>
-<div id="authView" class="wrap auth">
-  <div class="card">
-    <h1>My Expense Tracker</h1>
-    <p class="muted">Cloud version — same data on both mobiles.</p>
-    <div id="authMsg"></div>
-    <label>Email</label><input id="email" type="email" autocomplete="email" placeholder="Email">
-    <label>Password</label><input id="password" type="password" autocomplete="current-password" placeholder="Password">
-    <label id="nameLabel">Name (for new account)</label><input id="name" autocomplete="name" placeholder="Name">
-    <button id="loginBtn" class="primary">Login</button>
-    <button id="signupBtn" class="secondary" style="width:100%;margin-top:8px">Create account</button>
-  </div>
-</div>
-
-<div id="appView" class="wrap hidden">
-  <div class="top card">
-    <div><h2>My Expense Tracker</h2><div id="userInfo" class="muted"></div></div>
-    <button id="logoutBtn" class="secondary">Logout</button>
-  </div>
-
-  <div class="row">
-    <div class="stat"><span class="muted">Today Expense</span><b class="red" id="todayExpense">0</b></div>
-    <div class="stat"><span class="muted">Today Income</span><b class="green" id="todayIncome">0</b></div>
-    <div class="stat"><span class="muted">Balance</span><b id="todayBalance">0</b></div>
-  </div>
-
-  <div class="card">
-    <h3 id="formTitle">Add Entry</h3>
-    <input id="editId" type="hidden">
-    <div class="formgrid">
-      <div><label>Type</label><select id="type"><option value="expense">Expense</option><option value="income">Income</option></select></div>
-      <div><label>Amount</label><input id="amount" type="number" min="0" step="0.01" placeholder="0"></div>
-      <div><label>Category</label><select id="category">
-        <option>Food</option><option>Petrol</option><option>Shopping</option><option>Bills</option><option>Business</option><option>Medicine</option><option>Transport</option><option>Salary</option><option>Other</option>
-      </select></div>
-      <div><label>Date</label><input id="date" type="date"></div>
-      <div style="grid-column:1/-1"><label>Description</label><input id="description" placeholder="Description"></div>
-    </div>
-    <div class="actions">
-      <button id="saveBtn" class="primary" style="width:auto">Save Entry</button>
-      <button id="cancelBtn" class="secondary hidden">Cancel Edit</button>
-    </div>
-    <div id="appMsg"></div>
-  </div>
-
-  <div class="card">
-    <div class="top"><h3>All Entries</h3><button id="refreshBtn" class="secondary">Refresh</button></div>
-    <div class="formgrid">
-      <div><label>Filter Date</label><input id="filterDate" type="date"></div>
-      <div><label>Category</label><select id="filterCategory"><option value="">All</option><option>Food</option><option>Petrol</option><option>Shopping</option><option>Bills</option><option>Business</option><option>Medicine</option><option>Transport</option><option>Salary</option><option>Other</option></select></div>
-    </div>
-    <div id="entries" style="margin-top:10px"></div>
-  </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-const SUPABASE_URL = 'https://oknctubnisafnvgijokn.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_Hw0vG7zsf14AY4JsEVfHhA_dmSaa1PP';
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-const $ = id => document.getElementById(id);
-const money = n => Number(n||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
-const today = () => new Date().toISOString().slice(0,10);
-let currentUser = null, profile = null, allEntries = [];
-
-$("date").value = today();
-
-function msg(el, text, type="") {
-  el.innerHTML = text ? `<div class="msg ${type}">${text}</div>` : "";
-}
-
-async function loadProfile() {
-  const {data,error} = await sb.from("profiles").select("id,full_name,role").eq("id",currentUser.id).single();
-  if(error) throw error;
-  profile = data;
-  $("userInfo").textContent = `${profile.full_name || currentUser.email} • ${profile.role.toUpperCase()}`;
-}
-
-async function loadEntries() {
-  const {data,error} = await sb.from("expenses").select("*").order("date",{ascending:false}).order("created_at",{ascending:false});
-  if(error) throw error;
-  allEntries = data || [];
-  render();
-}
-
-function render() {
-  const fd = $("filterDate").value, fc = $("filterCategory").value;
-  const filtered = allEntries.filter(x => (!fd || x.date===fd) && (!fc || x.category===fc));
-  let te=0, ti=0;
-  allEntries.filter(x=>x.date===today()).forEach(x => x.type==="expense" ? te+=Number(x.amount) : ti+=Number(x.amount));
-  $("todayExpense").textContent = money(te);
-  $("todayIncome").textContent = money(ti);
-  $("todayBalance").textContent = money(ti-te);
-
-  if(!filtered.length) {
-    $("entries").innerHTML = '<p class="muted">No entries found.</p>'; return;
-  }
-  $("entries").innerHTML = filtered.map(x => {
-    const mine = x.user_id === currentUser.id;
-    const canEdit = mine || profile.role==="admin";
-    const canDelete = canEdit;
-    return `<div class="item">
-      <div>
-        <b class="${x.type==="expense"?"red":"green"}">${x.type==="expense"?"−":"+"} ${money(x.amount)}</b>
-        <span class="badge">${x.category}</span>
-        <div>${escapeHtml(x.description||"")}</div>
-        <div class="muted">${x.date} • ${mine?"You":(profile.role==="admin"?"Other user":"Other user")}</div>
-      </div>
-      <div class="actions">
-        ${canEdit?`<button class="secondary" onclick="editEntry('${x.id}')">Edit</button>`:""}
-        ${canDelete?`<button class="danger" onclick="deleteEntry('${x.id}')">Delete</button>`:""}
-      </div>
-    </div>`;
-  }).join("");
-}
-
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
-}
-
-async function saveEntry() {
-  const amount=Number($("amount").value), id=$("editId").value;
-  if(!amount || amount<0) { msg($("appMsg"),"Amount enter karein.","danger"); return; }
-  const payload={type:$("type").value,amount,category:$("category").value,date:$("date").value,description:$("description").value.trim()};
-  let res;
-  if(id) res=await sb.from("expenses").update(payload).eq("id",id);
-  else res=await sb.from("expenses").insert({...payload,user_id:currentUser.id});
-  if(res.error) { msg($("appMsg"),res.error.message,"danger"); return; }
-  msg($("appMsg"),"Saved successfully.","success");
-  clearForm(); await loadEntries();
-}
-
-window.editEntry = function(id) {
-  const x=allEntries.find(e=>String(e.id)===String(id)); if(!x) return;
-  $("editId").value=x.id; $("type").value=x.type; $("amount").value=x.amount; $("category").value=x.category; $("date").value=x.date; $("description").value=x.description||"";
-  $("formTitle").textContent="Edit Entry"; $("cancelBtn").classList.remove("hidden"); window.scrollTo({top:0,behavior:"smooth"});
-};
-window.deleteEntry = async function(id) {
-  if(!confirm("Delete this entry?")) return;
-  const {error}=await sb.from("expenses").delete().eq("id",id);
-  if(error) { msg($("appMsg"),error.message,"danger"); return; }
-  await loadEntries();
-};
-
-function clearForm() {
-  $("editId").value=""; $("type").value="expense"; $("amount").value=""; $("category").value="Food"; $("date").value=today(); $("description").value="";
-  $("formTitle").textContent="Add Entry"; $("cancelBtn").classList.add("hidden");
-}
-
-async function enterApp() {
-  const {data}=await sb.auth.getUser();
-  currentUser=data.user;
-  if(!currentUser) return showAuth();
-  try { await loadProfile(); await loadEntries(); $("authView").classList.add("hidden"); $("appView").classList.remove("hidden"); }
-  catch(e) { msg($("authMsg"),e.message,"danger"); }
-}
-function showAuth() { $("authView").classList.remove("hidden"); $("appView").classList.add("hidden"); }
-
-$("loginBtn").onclick=async()=>{
-  const {error}=await sb.auth.signInWithPassword({email:$("email").value.trim(),password:$("password").value});
-  if(error) msg($("authMsg"),error.message,"danger"); else enterApp();
-};
-$("signupBtn").onclick=async()=>{
-  const {data,error}=await sb.auth.signUp({email:$("email").value.trim(),password:$("password").value,options:{data:{full_name:$("name").value.trim()}}});
-  if(error) {msg($("authMsg"),error.message,"danger");return;}
-  if(data.session) enterApp(); else msg($("authMsg"),"Account ban gaya. Agar email confirmation on hai to email confirm karke Login karein.","success");
-};
-$("logoutBtn").onclick=async()=>{await sb.auth.signOut(); currentUser=null; profile=null; showAuth();};
-$("saveBtn").onclick=saveEntry;
-$("cancelBtn").onclick=clearForm;
-$("refreshBtn").onclick=loadEntries;
-$("filterDate").onchange=render;
-$("filterCategory").onchange=render;
-sb.auth.onAuthStateChange((_event,session)=>{ if(session && !currentUser) enterApp(); });
-enterApp();
-</script>
-</body>
-</html>
+*{box-sizing:border-box}body{margin:0;background:#f4f6fa;color:#172033;font-family:system-ui,sans-serif}button,input,select{font:inherit}button{border:0;border-radius:11px;padding:10px 13px}.top{background:#0f172a;color:white;padding:15px;position:sticky;top:0;z-index:5;display:flex;justify-content:space-between}main{max-width:1050px;margin:auto;padding:15px 12px 90px}.card{background:white;border:1px solid #e5e7eb;border-radius:18px;padding:16px;margin:12px 0}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.stat b{display:block;font-size:24px;margin-top:5px}.green{color:#15803d}.red{color:#b42318}.blue{color:#2563eb}.muted{color:#667085;font-size:13px}label{display:block;font-size:13px;font-weight:700;margin:10px 0 5px}input,select{width:100%;padding:11px;border:1px solid #d5dbe5;border-radius:11px}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.primary{background:#0f172a;color:white}.secondary{background:#edf1f6}.danger{background:#fee4e2;color:#a42318}.nav{position:fixed;bottom:0;left:0;right:0;background:white;border-top:1px solid #ddd;z-index:9}.nav div{max-width:700px;margin:auto;display:grid;grid-template-columns:repeat(5,1fr)}.nav button{background:white;color:#667085;font-size:11px;padding:10px 3px}.nav button.active{color:#2563eb;font-weight:800}.view{display:none}.view.active{display:block}table{width:100%;border-collapse:collapse;min-width:700px}th,td{padding:10px 7px;border-bottom:1px solid #eee;text-align:left;font-size:13px}.scroll{overflow:auto}.auth{min-height:100vh;display:grid;place-items:center;padding:20px}.auth .card{width:min(430px,100%);padding:25px}.msg{padding:10px;border-radius:10px;margin:10px 0;font-size:13px;background:#fee4e2;color:#991b1b}.ok{background:#dcfce7;color:#166534}.cat{display:flex;justify-content:space-between;border:1px solid #eee;padding:10px;border-radius:10px;margin:7px 0}.hidden{display:none!important}@media(max-width:650px){.stats,.grid{grid-template-columns:1fr}}
+</style></head><body>
+<div id="auth" class="auth"><div class="card"><h1>💼 Expense Manager</h1><p class="muted">Professional monthly income & expense tracker</p><div id="am"></div><label>Email</label><input id="email" type="email"><label>Password</label><input id="pass" type="password"><label>Name</label><input id="name"><button id="login" class="primary" style="width:100%;margin-top:14px">Login</button><button id="signup" class="secondary" style="width:100%;margin-top:8px">Create account</button></div></div>
+<div id="app" class="hidden"><header class="top"><b>💼 Expense Manager</b><span id="who"></span><button id="logout" class="secondary">Logout</button></header><main>
+<div id="msg"></div>
+<section id="dash" class="view active"><h2>Dashboard</h2><label>Month</label><input id="month" type="month"><div class="stats"><div class="card stat"><span class="muted">TOTAL INCOME</span><b id="inc" class="green">Rs. 0</b></div><div class="card stat"><span class="muted">TOTAL EXPENSES</span><b id="exp" class="red">Rs. 0</b></div><div class="card stat"><span class="muted">NET BALANCE</span><b id="bal" class="blue">Rs. 0</b></div></div><div class="card"><h3>Category-wise Expenses</h3><div id="chart"></div></div></section>
+<section id="tx" class="view"><h2>Transactions</h2><div class="card grid"><div><label>Month</label><input id="txmonth" type="month"></div><div><label>Type</label><select id="txtype"><option value="">All</option><option value="expense">Expense</option><option value="income">Income</option></select></div></div><div class="card scroll"><table><thead><tr><th>Date</th><th>Type</th><th>Category</th><th>Amount</th><th>Description</th><th>Added By</th><th>Action</th></tr></thead><tbody id="tbody"></tbody></table></div></section>
+<section id="add" class="view"><h2 id="ft">Add Transaction</h2><div class="card"><input id="eid" type="hidden"><div class="grid"><div><label>Type</label><select id="type"><option value="expense">Expense</option><option value="income">Income</option></select></div><div><label>Amount</label><input id="amount" type="number" min="0" step=".01"></div><div><label>Category</label><select id="cat"></select></div><div><label>Date</label><input id="date" type="date"></div></div><label>Description</label><input id="desc"><button id="save" class="primary" style="margin-top:14px">Save</button><button id="cancel" class="secondary hidden" style="margin-left:6px">Cancel</button></div></section>
+<section id="cats" class="view"><h2>Categories</h2><div id="catbox" class="card"><div class="grid"><div><label>Name</label><input id="cn"></div><div><label>Type</label><select id="ct"><option value="expense">Expense</option><option value="income">Income</option></select></div></div><button id="addcat" class="primary" style="margin-top:12px">Add Category</button></div><div class="card" id="catlist"></div></section>
+<section id="users" class="view"><h2>Users</h2><div class="card"><div class="scroll"><table><thead><tr><th>Name</th><th>Email</th><th>Role</th></tr></thead><tbody id="ubody"></tbody></table></div></div></section>
+</main><nav class="nav"><div><button data-v="dash" class="active">🏠<br>Dashboard</button><button data-v="tx">💳<br>Transactions</button><button data-v="add">➕<br>Add</button><button data-v="cats">📁<br>Categories</button><button data-v="users" id="unav">👥<br>Users</button></div></nav></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script>
+const sb=supabase.createClient('https://oknctubnisafnvgijokn.supabase.co','sb_publishable_Hw0vG7zsf14AY4JsEVfHhA_dmSaa1PP'),$=x=>document.getElementById(x),today=()=>new Date().toISOString().slice(0,10),month=()=>new Date().toISOString().slice(0,7);let me,profile,users=[],cats=[],tx=[];
+const money=n=>"Rs. "+Number(n||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}),esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
+function msg(t,ok=false){$("msg").innerHTML=t?`<div class="msg ${ok?"ok":""}">${esc(t)}</div>`:""}
+function nav(v){document.querySelectorAll(".view").forEach(x=>x.classList.remove("active"));$(v).classList.add("active");document.querySelectorAll(".nav button").forEach(x=>x.classList.toggle("active",x.dataset.v===v))}
+function admin(){return profile?.role==="admin"} function manager(){return ["admin","manager"].includes(profile?.role)}
+async function load(){let r=await sb.from("profiles").select("*").order("created_at");if(r.error)throw r.error;users=r.data||[];profile=users.find(x=>x.id===me.id);r=await sb.from("categories").select("*").order("name");if(r.error)throw r.error;cats=r.data||[];r=await sb.from("expenses").select("*").order("date",{ascending:false});if(r.error)throw r.error;tx=r.data||[];$("who").textContent=(profile?.full_name||me.email)+" • "+(profile?.role||"staff").toUpperCase();$("unav").classList.toggle("hidden",!admin());fillCat();draw();drawTx();drawCats();drawUsers()}
+function fillCat(){let t=$("type").value;$("cat").innerHTML=cats.filter(c=>c.type===t).map(c=>`<option>${esc(c.name)}</option>`).join("")}
+function draw(){let m=$("month").value||month(),a=tx.filter(x=>x.date?.slice(0,7)===m),i=a.filter(x=>x.type==="income").reduce((s,x)=>s+ +x.amount,0),e=a.filter(x=>x.type==="expense").reduce((s,x)=>s+ +x.amount,0);$("inc").textContent=money(i);$("exp").textContent=money(e);$("bal").textContent=money(i-e);let o={};a.filter(x=>x.type==="expense").forEach(x=>o[x.category]=(o[x.category]||0)+ +x.amount);let z=Object.entries(o).sort((a,b)=>b[1]-a[1]),mx=z[0]?.[1]||1;$("chart").innerHTML=z.length?z.map(x=>`<p><b>${esc(x[0])}</b> — ${money(x[1])}<progress value="${x[1]}" max="${mx}" style="width:100%"></progress></p>`).join(""):"<p class=muted>No expenses this month.</p>"}
+function drawTx(){let m=$("txmonth").value||month(),t=$("txtype").value,a=tx.filter(x=>x.date?.slice(0,7)===m&&(!t||x.type===t));$("tbody").innerHTML=a.length?a.map(x=>{let p=users.find(u=>u.id===x.user_id),can=admin()||x.user_id===me.id;return `<tr><td>${x.date}</td><td>${x.type}</td><td>${esc(x.category)}</td><td>${money(x.amount)}</td><td>${esc(x.description)}</td><td>${esc(p?.full_name||"User")}</td><td>${can?`<button class=secondary onclick="edit('${x.id}')">Edit</button> <button class=danger onclick="delx('${x.id}')">Delete</button>`:"—"}</td></tr>`}).join(""):'<tr><td colspan=7>No transactions.</td></tr>'}
+function drawCats(){$("catbox").classList.toggle("hidden",!manager());$("catlist").innerHTML=cats.map(c=>`<div class=cat><span><b>${esc(c.name)}</b> · ${c.type}</span>${manager()?`<span><button class=secondary onclick="ec('${c.id}')">Edit</button> <button class=danger onclick="dc('${c.id}')">Delete</button></span>`:""}</div>`).join("")}
+function drawUsers(){$("ubody").innerHTML=admin()?users.map(u=>`<tr><td>${esc(u.full_name)}</td><td>${esc(u.email)}</td><td><select onchange="role('${u.id}',this.value)" ${u.id===me.id?"disabled":""}><option ${u.role==="admin"?"selected":""}>admin</option><option ${u.role==="manager"?"selected":""}>manager</option><option ${u.role==="staff"?"selected":""}>staff</option></select></td></tr>`).join(""):"<tr><td colspan=3>Admin only.</td></tr>"}
+window.edit=id=>{let x=tx.find(a=>String(a.id)===String(id));$("eid").value=x.id;$("type").value=x.type;$("amount").value=x.amount;$("date").value=x.date;$("desc").value=x.description||"";fillCat();$("cat").value=x.category;$("ft").textContent="Edit Transaction";$("cancel").classList.remove("hidden");nav("add")}
+window.delx=async id=>{if(confirm("Delete transaction?")){let r=await sb.from("expenses").delete().eq("id",id);if(r.error)alert(r.error.message);else load()}}
+window.ec=async id=>{let c=cats.find(x=>String(x.id)===String(id)),n=prompt("Category name",c.name);if(n&&n!==c.name){let r=await sb.from("categories").update({name:n.trim()}).eq("id",id);if(r.error)alert(r.error.message);else load()}}
+window.dc=async id=>{if(confirm("Delete category? Existing transactions stay unchanged.")){let r=await sb.from("categories").delete().eq("id",id);if(r.error)alert(r.error.message);else load()}}
+window.role=async(id,role)=>{let r=await sb.from("profiles").update({role}).eq("id",id);if(r.error)alert(r.error.message);else load()}
+$("login").onclick=async()=>{let r=await sb.auth.signInWithPassword({email:$("email").value.trim(),password:$("pass").value});if(r.error)$("am").innerHTML='<div class=msg>'+esc(r.error.message)+'</div>';else start()}
+$("signup").onclick=async()=>{let r=await sb.auth.signUp({email:$("email").value.trim(),password:$("pass").value,options:{data:{full_name:$("name").value.trim()}}});$("am").innerHTML='<div class="msg ok">'+(r.error?esc(r.error.message):"Account created. Confirm email if requested, then Login.")+'</div>'}
+$("logout").onclick=async()=>{await sb.auth.signOut();location.reload()}
+$("month").value=month();$("txmonth").value=month();$("date").value=today();$("month").onchange=draw;$("txmonth").onchange=drawTx;$("txtype").onchange=drawTx;$("type").onchange=fillCat;
+$("save").onclick=async()=>{let a=+$("amount").value,id=$("eid").value,p={type:$("type").value,amount:a,category:$("cat").value,date:$("date").value,description:$("desc").value.trim()},r=id?await sb.from("expenses").update(p).eq("id",id):await sb.from("expenses").insert({...p,user_id:me.id});if(r.error)msg(r.error.message);else{msg("Saved",true);clear();await load();nav("tx")}}
+function clear(){$("eid").value="";$("ft").textContent="Add Transaction";$("amount").value="";$("date").value=today();$("desc").value="";$("cancel").classList.add("hidden");fillCat()}$("cancel").onclick=clear;
+$("addcat").onclick=async()=>{let n=$("cn").value.trim(),t=$("ct").value;if(!n)return;let r=await sb.from("categories").insert({name:n,type:t});if(r.error)alert(r.error.message);else{$("cn").value="";load()}}
+document.querySelectorAll(".nav button[data-v]").forEach(b=>b.onclick=()=>nav(b.dataset.v));
+async function start(){let r=await sb.auth.getUser();me=r.data.user;if(!me)return;try{await load();$("auth").classList.add("hidden");$("app").classList.remove("hidden")}catch(e){$("am").innerHTML='<div class=msg>'+esc(e.message)+'</div>'}}start();
+</script></body></html>
