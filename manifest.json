@@ -1,6 +1,6 @@
 {
-  "name":"Expense Manager",
-  "short_name":"Expenses",
+  "name":"Shahid Finance Manager",
+  "short_name":"Shahid Finance",
   "start_url":"./",
   "display":"standalone",
   "background_color":"#f4f6fa",
